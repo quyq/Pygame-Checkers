@@ -11,26 +11,16 @@ http://itgirl.dreamhosters.com/itgirlgames/games/Program%20Leaders/ClareR/Checke
 This is the final version of my checkers project for Programming Workshop at Marlboro College. The entire thing has been rafactored and made almost completely object oriented.
 
 Funcitonalities include:
-
 - Having the pieces and board drawn to the screen
-
 - The ability to move pieces by clicking on the piece you want to move, then clicking on the square you would
   like to move to. You can change you mind about the piece you would like to move, just click on a new piece of yours.
-
 - Knowledge of what moves are legal. When moving pieces, you'll be limited to legal moves.
-
 - Capturing
-
 - DOUBLE capturing etc.
-
 - Legal move and captive piece highlighting
-
 - Turn changes
-
 - Automatic kinging and the ability for them to move backwords
-
 - Automatic check for and end game. 
-
 - A silky smoooth 60 FPS!
 
 Everest Witman - May 2014 - Marlboro College - Programming Workshop 
@@ -92,17 +82,13 @@ class Game:
 				if self.hop == False:
 					if self.board.location(self.mouse_pos).occupant != None and self.board.location(self.mouse_pos).occupant.color == self.turn:
 						self.selected_piece = self.mouse_pos
-
 					elif self.selected_piece != None and self.mouse_pos in self.board.legal_moves(self.selected_piece):
-
 						self.board.move_piece(self.selected_piece, self.mouse_pos)
 					
 						if self.mouse_pos not in self.board.adjacent(self.selected_piece):
 							self.board.remove_piece(((self.selected_piece[0] + self.mouse_pos[0]) >> 1, (self.selected_piece[1] + self.mouse_pos[1]) >> 1))
-						
 							self.hop = True
 							self.selected_piece = self.mouse_pos
-
 						else:
 							self.end_turn()
 
@@ -112,8 +98,7 @@ class Game:
 						self.board.remove_piece(((self.selected_piece[0] + self.mouse_pos[0]) >> 1, (self.selected_piece[1] + self.mouse_pos[1]) >> 1))
 
 					if self.board.legal_moves(self.mouse_pos, self.hop) == []:
-							self.end_turn()
-
+						self.end_turn()
 					else:
 						self.selected_piece = self.mouse_pos
 
@@ -270,20 +255,13 @@ class Board:
 		"""
 
 		# initialize squares and place them in matrix
-
 		matrix = [[None] * 8 for i in range(8)]
 
-		# The following code block has been adapted from
-		# http://itgirl.dreamhosters.com/itgirlgames/games/Program%20Leaders/ClareR/Checkers/checkers.py
 		for x in range(8):
 			for y in range(8):
-				if (x % 2 != 0) and (y % 2 == 0):
+				if ((x + y) % 2 != 0):
 					matrix[y][x] = Square(WHITE)
-				elif (x % 2 != 0) and (y % 2 != 0):
-					matrix[y][x] = Square(BLACK)
-				elif (x % 2 == 0) and (y % 2 != 0):
-					matrix[y][x] = Square(WHITE)
-				elif (x % 2 == 0) and (y % 2 == 0): 
+				else:
 					matrix[y][x] = Square(BLACK)
 
 		# initialize the pieces and put them in the appropriate squares
@@ -297,27 +275,10 @@ class Board:
 					matrix[x][y].occupant = Piece(BLUE)
 
 		return matrix
-
-	def board_string(self, board):
-		"""
-		Takes a board and returns a matrix of the board space colors. Used for testing new_board()
-		"""
-
-		board_string = [[None] * 8] * 8 
-
-		for x in range(8):
-			for y in range(8):
-				if board[x][y].color == WHITE:
-					board_string[x][y] = "WHITE"
-				else:
-					board_string[x][y] = "BLACK"
-
-
-		return board_string
 	
 	def rel(self, dir, pixel):
 		"""
-		Returns the coordinates one square in a different direction to (x,y).
+		Returns the coordinates one square in a different direction to pixel.
 
 		===DOCTESTS===
 
@@ -335,8 +296,7 @@ class Board:
 		>>> board.rel(SOUTHWEST, (2,5))
 		(1,6)
 		"""
-		x = pixel[0]
-		y = pixel[1]
+		(x, y) = pixel
 		if dir == NORTHWEST:
 			return (x - 1, y - 1)
 		elif dir == NORTHEAST:
@@ -350,42 +310,34 @@ class Board:
 
 	def adjacent(self, pixel):
 		"""
-		Returns a list of squares locations that are adjacent (on a diagonal) to (x,y).
+		Returns a list of squares locations that are adjacent (on a diagonal) to pixel.
 		"""
-		x = pixel[0]
-		y = pixel[1]
 
-		return [self.rel(NORTHWEST, (x,y)), self.rel(NORTHEAST, (x,y)),self.rel(SOUTHWEST, (x,y)),self.rel(SOUTHEAST, (x,y))]
+		return [self.rel(NORTHWEST, pixel), self.rel(NORTHEAST, pixel),self.rel(SOUTHWEST, pixel),self.rel(SOUTHEAST, pixel)]
 
 	def location(self, pixel):
 		"""
 		Takes a set of coordinates as arguments and returns self.matrix[x][y]
 		This can be faster than writing something like self.matrix[coords[0]][coords[1]]
 		"""
-		x = pixel[0]
-		y = pixel[1]
+		(x, y) = pixel
 
 		return self.matrix[x][y]
 
 	def blind_legal_moves(self, pixel):
 		"""
-		Returns a list of blind legal move locations from a set of coordinates (x,y) on the board. 
+		Returns a list of blind legal move locations from a set of coordinates pixel on the board. 
 		If that location is empty, then blind_legal_moves() return an empty list.
 		"""
 
-		x = pixel[0]
-		y = pixel[1]
+		(x, y) = pixel
 		if self.matrix[x][y].occupant != None:
-			
 			if self.matrix[x][y].occupant.king == False and self.matrix[x][y].occupant.color == BLUE:
-				blind_legal_moves = [self.rel(NORTHWEST, (x,y)), self.rel(NORTHEAST, (x,y))]
-				
+				blind_legal_moves = [self.rel(NORTHWEST, pixel), self.rel(NORTHEAST, pixel)]
 			elif self.matrix[x][y].occupant.king == False and self.matrix[x][y].occupant.color == RED:
-				blind_legal_moves = [self.rel(SOUTHWEST, (x,y)), self.rel(SOUTHEAST, (x,y))]
-
+				blind_legal_moves = [self.rel(SOUTHWEST, pixel), self.rel(SOUTHEAST, pixel)]
 			else:
-				blind_legal_moves = [self.rel(NORTHWEST, (x,y)), self.rel(NORTHEAST, (x,y)), self.rel(SOUTHWEST, (x,y)), self.rel(SOUTHEAST, (x,y))]
-
+				blind_legal_moves = [self.rel(NORTHWEST, pixel), self.rel(NORTHEAST, pixel), self.rel(SOUTHWEST, pixel), self.rel(SOUTHEAST, pixel)]
 		else:
 			blind_legal_moves = []
 
@@ -393,13 +345,12 @@ class Board:
 
 	def legal_moves(self, pixel, hop = False):
 		"""
-		Returns a list of legal move locations from a given set of coordinates (x,y) on the board.
+		Returns a list of legal move locations from a given set of coordinates pixel on the board.
 		If that location is empty, then legal_moves() returns an empty list.
 		"""
 
-		x = pixel[0]
-		y = pixel[1]
-		blind_legal_moves = self.blind_legal_moves((x,y)) 
+		(x, y) = pixel
+		blind_legal_moves = self.blind_legal_moves(pixel) 
 		legal_moves = []
 
 		if hop == False:
@@ -408,39 +359,35 @@ class Board:
 					if self.on_board(move):
 						if self.location(move).occupant == None:
 							legal_moves.append(move)
-
-						elif self.location(move).occupant.color != self.location((x,y)).occupant.color and self.on_board((move[0] + (move[0] - x), move[1] + (move[1] - y))) and self.location((move[0] + (move[0] - x), move[1] + (move[1] - y))).occupant == None: # is this location filled by an enemy piece?
+						elif self.location(move).occupant.color != self.location(pixel).occupant.color and self.on_board((move[0] + (move[0] - x), move[1] + (move[1] - y))) and self.location((move[0] + (move[0] - x), move[1] + (move[1] - y))).occupant == None: # is this location filled by an enemy piece?
 							legal_moves.append((move[0] + (move[0] - x), move[1] + (move[1] - y)))
 
 		else: # hop == True
 			for move in blind_legal_moves:
 				if self.on_board(move) and self.location(move).occupant != None:
-					if self.location(move).occupant.color != self.location((x,y)).occupant.color and self.on_board((move[0] + (move[0] - x), move[1] + (move[1] - y))) and self.location((move[0] + (move[0] - x), move[1] + (move[1] - y))).occupant == None: # is this location filled by an enemy piece?
+					if self.location(move).occupant.color != self.location(pixel).occupant.color and self.on_board((move[0] + (move[0] - x), move[1] + (move[1] - y))) and self.location((move[0] + (move[0] - x), move[1] + (move[1] - y))).occupant == None: # is this location filled by an enemy piece?
 						legal_moves.append((move[0] + (move[0] - x), move[1] + (move[1] - y)))
 
 		return legal_moves
 
 	def remove_piece(self, pixel):
 		"""
-		Removes a piece from the board at position (x,y). 
+		Removes a piece from the board at position pixel. 
 		"""
-		x = pixel[0]
-		y = pixel[1]
+		(x, y) = pixel
 		self.matrix[x][y].occupant = None
 
 	def move_piece(self, pixel_start, pixel_end):
 		"""
 		Move a piece from (start_x, start_y) to (end_x, end_y).
 		"""
-		start_x = pixel_start[0]
-		start_y = pixel_start[1]
-		end_x = pixel_end[0]
-		end_y = pixel_end[1]
+		(start_x, start_y) = pixel_start
+		(end_x, end_y) = pixel_end
 
 		self.matrix[end_x][end_y].occupant = self.matrix[start_x][start_y].occupant
-		self.remove_piece((start_x, start_y))
+		self.remove_piece(pixel_start)
 
-		self.king((end_x, end_y))
+		self.king(pixel_end)
 
 	def is_end_square(self, coords):
 		"""
@@ -468,7 +415,7 @@ class Board:
 
 	def on_board(self, pixel):
 		"""
-		Checks to see if the given square (x,y) lies on the board.
+		Checks to see if the given square pixel lies on the board.
 		If it does, then on_board() return True. Otherwise it returns false.
 
 		===DOCTESTS===
@@ -484,24 +431,21 @@ class Board:
 		False
 		"""
 
-		x = pixel[0]
-		y = pixel[1]
+		(x, y) = pixel
 		if x < 0 or y < 0 or x > 7 or y > 7:
 			return False
 		else:
 			return True
 
-
 	def king(self, pixel):
 		"""
-		Takes in (x,y), the coordinates of square to be considered for kinging.
+		Takes in pixel, the coordinates of square to be considered for kinging.
 		If it meets the criteria, then king() kings the piece in that square and kings it.
 		"""
-		x = pixel[0]
-		y = pixel[1]
-		if self.location((x,y)).occupant != None:
-			if (self.location((x,y)).occupant.color == BLUE and y == 0) or (self.location((x,y)).occupant.color == RED and y == 7):
-				self.location((x,y)).occupant.king = True 
+		(x, y) = pixel
+		if self.location(pixel).occupant != None:
+			if (self.location(pixel).occupant.color == BLUE and y == 0) or (self.location(pixel).occupant.color == RED and y == 7):
+				self.location(pixel).occupant.king = True 
 
 class Piece:
 	def __init__(self, color, king = False):
