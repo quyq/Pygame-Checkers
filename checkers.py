@@ -26,8 +26,9 @@ Funcitonalities include:
 Everest Witman - May 2014 - Marlboro College - Programming Workshop 
 """
 
-import pygame, sys
+import pygame
 from pygame.locals import *
+import re
 
 pygame.font.init()
 
@@ -46,12 +47,15 @@ NORTHEAST = "northeast"
 SOUTHWEST = "southwest"
 SOUTHEAST = "southeast"
 
+#NET_EVENT = pygame.event.custom_type()
+NET_EVENT = pygame.USEREVENT + 1
+
 class Game:
 	"""
 	The main game control.
 	"""
 
-	def __init__(self):
+	def __init__(self, session=None):
 		self.graphics = Graphics()
 		self.board = Board()
 		
@@ -59,6 +63,7 @@ class Game:
 		self.selected_piece = None # a board location. 
 		self.hop = False
 		self.selected_legal_moves = []
+		self.session = session
 
 	def setup(self):
 		"""Draws the window and board at the beginning of the game"""
@@ -78,7 +83,19 @@ class Game:
 			if event.type == QUIT:
 				self.terminate_game()
 
+			if self.session!=None:
+				if self.session.conn==None: continue    # skip if no connection
+				# server is BLUE, client is RED
+				if (self.session.role=='server' and self.turn==RED) or (self.session.role=='client' and self.turn==BLUE):
+					if event.type == NET_EVENT:	# process the data
+						#print("Received: ", event.data)
+						self.mouse_pos = (event.data[0], event.data[1])
+						event = pygame.event.Event(MOUSEBUTTONDOWN)	# mimic as MOUSEBUTTONDOWN
+					else: continue	# ignore other events as it is not my turn
+
 			if event.type == MOUSEBUTTONDOWN:
+				if self.session!=None and self.session.conn!=None:
+					self.session.conn.send(bytes(self.mouse_pos)) # sync mouse event to remote side
 				if self.hop == False:
 					if self.board.location(self.mouse_pos).occupant != None and self.board.location(self.mouse_pos).occupant.color == self.turn:
 						self.selected_piece = self.mouse_pos
@@ -129,7 +146,6 @@ class Game:
 			self.turn = RED
 		else:
 			self.turn = BLUE
-
 		self.selected_piece = None
 		self.selected_legal_moves = []
 		self.hop = False
@@ -457,9 +473,70 @@ class Square:
 		self.color = color # color is either BLACK or WHITE
 		self.occupant = occupant # occupant is a Square object
 
-def main():
-	game = Game()
-	game.main()
+
+import socket
+from _thread import *
+#from threading import Event
+import sys
+DEFAULT_PORT = 5555
+LOCALHOST = "127.0.0.1"
+
+class GameNet:
+	def __init__(self, role, port=DEFAULT_PORT, server_ip=LOCALHOST):
+		self.role = role
+		self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		self.conn=None
+		try:
+			if role=='server':
+				addr = (LOCALHOST, port) # for server side, IP is localhost
+				self.socket.bind(addr)
+				self.socket.listen(2)
+				start_new_thread(self.thread_server, ())
+			else:
+				print(f"Trying to connect to {server_ip}:{port}...")
+				addr = (server_ip, port)
+				self.socket.connect(addr)
+				start_new_thread(self.thread_worker, (self.socket,))
+		except socket.error as e: print(e)
+
+	def thread_server(self):
+		print("Waiting for a connection, Server Started")
+		while True:
+			conn, addr = self.socket.accept()
+			print("Connected to:", addr)
+			start_new_thread(self.thread_worker, (conn,))
+			# exit here if only allow one client connected
+
+	def thread_worker(self, conn):
+		self.conn=conn
+		print(f"{self.role} side connected")
+		while True:
+			try:
+				recv_data = conn.recv(2048)
+				if recv_data:
+					print(f"{self.role} received {recv_data}")
+					mouse_event = pygame.event.Event(NET_EVENT, data=recv_data)
+					pygame.event.post(mouse_event)
+				#else: print("Disconnected"); break
+			except Exception as e:
+				print(e)
+				break
+		print("Lost connection")
+		conn.close()
+		self.conn=None
 
 if __name__ == "__main__":
-	main()
+	session = None
+	argc = len(sys.argv)
+	server_ip = LOCALHOST
+	port = DEFAULT_PORT
+	if argc>2:
+		m = re.match(r'(([^:]+):)?(\d+)', sys.argv[2])
+		if m!=None:
+			if m.group(1)!='': server_ip=m.group(2)
+			ip = m.group(3)
+	if argc>1:
+		if sys.argv[1]=='s': session=GameNet('server', port)
+		else: session=GameNet('client', port, server_ip)
+	game = Game(session)
+	game.main()
